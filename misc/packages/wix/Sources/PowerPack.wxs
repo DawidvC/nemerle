@@ -15,6 +15,7 @@
             <ComponentRef Id="Comp_ObjectExpressions"/>
             <ComponentRef Id="Comp_AopMacros"/>
             <ComponentRef Id="Comp_ActivePatterns"/>
+            <ComponentRef Id="Comp_VirtualStatics"/>
             
             <?if $(var.NVer) = "net-4.0" or $(var.NVer) = "net-4.5" ?>
                 <ComponentRef Id="Comp_NemerleAsync"/>
@@ -257,17 +258,17 @@
                        Guid="$(var.Comp_Diff_Guid)">
                 <File Id="File_Nemerle.Diff.dll"
                       Name="Nemerle.Diff.dll"
-                      Source="$(var.DistPath)\power-pack\">
+                      Source="$(var.DistPath)\test-framework\">
                 </File>
                 <?if $(var.Configuration) = "Release" ?>
                     <File Id="File_Nemerle.Diff.xml"
                           Name="Nemerle.Diff.xml"
-                          Source="$(var.DistPath)\power-pack\"/>
+                          Source="$(var.DistPath)\test-framework\"/>
                 <?endif?>
                 <?if $(var.Configuration) = "Debug" ?>
                     <File Id="File_Nemerle.Diff.pdb"
                           Name="Nemerle.Diff.pdb"
-                          Source="$(var.DistPath)\power-pack\"/>
+                          Source="$(var.DistPath)\test-framework\"/>
                 <?endif?>
             </Component>
 
@@ -325,58 +326,7 @@
                               Source="$(var.DistPath)\power-pack\">
                         </File>
                     <?endif?>
-                    
-                    <File Id="File_Nemerle.Statechart.Analyser.dll"
-                          Name="Nemerle.Statechart.Analyser.dll"
-                          Source="$(var.DistPath)\power-pack\">
-                    </File>
-                    <?if $(var.Configuration) = "Release" ?>
-                        <File Id="File_Nemerle.Statechart.Analyser.xml"
-                              Name="Nemerle.Statechart.Analyser.xml"
-                              Source="$(var.DistPath)\power-pack\">
-                        </File>
-                    <?endif?>
-                    <?if $(var.Configuration) = "Debug" ?>
-                        <File Id="File_Nemerle.Statechart.Analyser.pdb"
-                              Name="Nemerle.Statechart.Analyser.pdb"
-                              Source="$(var.DistPath)\power-pack\">
-                        </File>
-                    <?endif?>
-                    
-                    <File Id="File_Nemerle.Statechart.Ast.dll"
-                          Name="Nemerle.Statechart.Ast.dll"
-                          Source="$(var.DistPath)\power-pack\">
-                    </File>
-                    <?if $(var.Configuration) = "Release" ?>
-                        <File Id="File_Nemerle.Statechart.Ast.xml"
-                              Name="Nemerle.Statechart.Ast.xml"
-                              Source="$(var.DistPath)\power-pack\">
-                        </File>
-                    <?endif?>
-                    <?if $(var.Configuration) = "Debug" ?>
-                        <File Id="File_Nemerle.Statechart.Ast.pdb"
-                              Name="Nemerle.Statechart.Ast.pdb"
-                              Source="$(var.DistPath)\power-pack\">
-                        </File>
-                    <?endif?>
-                    
-                    <File Id="File_Nemerle.Statechart.Generator.dll"
-                          Name="Nemerle.Statechart.Generator.dll"
-                          Source="$(var.DistPath)\power-pack\">
-                    </File>
-                    <?if $(var.Configuration) = "Release" ?>
-                        <File Id="File_Nemerle.Statechart.Generator.xml"
-                              Name="Nemerle.Statechart.Generator.xml"
-                              Source="$(var.DistPath)\power-pack\">
-                        </File>
-                    <?endif?>
-                    <?if $(var.Configuration) = "Debug" ?>
-                        <File Id="File_Nemerle.Statechart.Generator.pdb"
-                          Name="Nemerle.Statechart.Generator.pdb"
-                          Source="$(var.DistPath)\power-pack\">
-                        </File>
-                    <?endif?>
-                    
+                                        
                     <File Id="File_Nemerle.Statechart.Lib.dll"
                           Name="Nemerle.Statechart.Lib.dll"
                           Source="$(var.DistPath)\power-pack\">
@@ -393,24 +343,47 @@
                           Source="$(var.DistPath)\power-pack\">
                         </File>
                     <?endif?>
-                    <File Id="File_Nemerle.Statechart.Parser.dll"
-                          Name="Nemerle.Statechart.Parser.dll"
-                          Source="$(var.DistPath)\power-pack\">
-                    </File>
-                    <?if $(var.Configuration) = "Release" ?>
-                        <File Id="File_Nemerle.Statechart.Parser.xml"
-                          Name="Nemerle.Statechart.Parser.xml"
-                          Source="$(var.DistPath)\power-pack\">
-                        </File>
-                    <?endif?>
-                    <?if $(var.Configuration) = "Debug" ?>
-                        <File Id="File_Nemerle.Statechart.Parser.pdb"
-                          Name="Nemerle.Statechart.Parser.pdb"
-                          Source="$(var.DistPath)\power-pack\">
-                        </File>
+
+                  <File Id="File_Nemerle.Statechart.Runtime.dll"
+                        Name="Nemerle.Statechart.Runtime.dll"
+                        Source="$(var.DistPath)\power-pack\">
+                  </File>
+                  <?if $(var.Configuration) = "Release" ?>
+                  <File Id="File_Nemerle.Statechart.Runtime.xml"
+                        Name="Nemerle.Statechart.Runtime.xml"
+                        Source="$(var.DistPath)\power-pack\">
+                  </File>
+                  <?endif?>
+                  <?if $(var.Configuration) = "Debug" ?>
+                  <File Id="File_Nemerle.Statechart.Runtime.pdb"
+                    Name="Nemerle.Statechart.Runtime.pdb"
+                    Source="$(var.DistPath)\power-pack\">
+                  </File>
                     <?endif?>                   
+
                 </Component>
             <?endif ?>
+      
+            <Component Id="Comp_VirtualStatics"
+                       DiskId="1"
+                       Guid="$(var.Comp_VirtualStatics_Guid)">      
+                <File Id="File_Nemerle.VirtualStatics.dll"
+                      Name="Nemerle.VirtualStatics.dll"
+                      Source="$(var.DistPath)\power-pack\">
+                </File>
+                <?if $(var.Configuration) = "Release" ?>
+                    <File Id="File_Nemerle.VirtualStatics.xml"
+                          Name="Nemerle.VirtualStatics.xml"
+                          Source="$(var.DistPath)\power-pack\">
+                    </File>
+                <?endif?>
+                <?if $(var.Configuration) = "Debug" ?>
+                    <File Id="File_Nemerle.VirtualStatics.pdb"
+                          Name="Nemerle.VirtualStatics.pdb"
+                          Source="$(var.DistPath)\power-pack\">
+                    </File>
+                <?endif?>
+            </Component>
         </DirectoryRef>
     </Fragment>
 </Wix>

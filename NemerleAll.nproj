@@ -1,37 +1,58 @@
 <Project DefaultTargets="DevBuild2Stage" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <UsingTask TaskName="MSBuild.Community.Tasks.FileUpdate" AssemblyFile="$(MSBuildProjectDirectory)\ExternalDependences\MSBuild.Community.Tasks.dll" />
+  <PropertyGroup>
+    <UseMSBuild Condition="Exists('$(MSBuildBinPath)\msbuild.exe')">1</UseMSBuild>
+    <ExeRunner Condition=" '$(OS)' == 'Windows_NT' "></ExeRunner>
+    <ExeRunner Condition=" '$(OS)' != 'Windows_NT' ">mono </ExeRunner>
+  </PropertyGroup>
   <PropertyGroup Condition=" '$(NTargetName)' == '' ">
-    <NTargetName>Rebuild</NTargetName>
+    <NTargetName Condition="'$(UseMSBuild)' != ''">Rebuild</NTargetName>
+    <NTargetName Condition="'$(UseMSBuild)' == ''">Build</NTargetName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(NInstall)' == '' ">
-    <!--Folder for Nemerle installation. To install use "Install" terget.-->
+    <!--Folder for Nemerle installation. To install use "Install" target.-->
     <NInstall Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'">$(ProgramFiles)\Nemerle\Net-3.5</NInstall>
-    <NInstall Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5'">$(ProgramFiles)\Nemerle\Net-4.0</NInstall>
+    <NInstall Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'">$(ProgramFiles)\Nemerle\Net-4.0</NInstall>
   </PropertyGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <!--Path to root directory of Nemerle sources.-->
     <NRoot>$(MSBuildProjectDirectory)</NRoot>
-    <NVer Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'">net-3.5</NVer>
-    <NVer Condition="'$(TargetFrameworkVersion)' == 'v4.0'">net-4.0</NVer>
-    <NVer Condition="'$(TargetFrameworkVersion)' == 'v4.5'">net-4.5</NVer>
+    <NPrefix Condition="'$(UseMSBuild)' != ''">net</NPrefix>
+    <NPrefix Condition="'$(UseMSBuild)' == ''">mono</NPrefix>
+    <NVer Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'">$(NPrefix)-3.5</NVer>
+    <NVer Condition="'$(TargetFrameworkVersion)' == 'v4.0'">$(NPrefix)-4.0</NVer>
+    <NVer Condition="'$(TargetFrameworkVersion)' == 'v4.5'">$(NPrefix)-4.5</NVer>
+    <NVer Condition="'$(TargetFrameworkVersion)' == 'v4.5.1'">$(NPrefix)-4.5.1</NVer>
     <!-- Original boot -->
     <NRootBoot Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'">$(NRoot)\boot\</NRootBoot>
-    <NRootBoot Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5'">$(NRoot)\boot-4.0\</NRootBoot>
+    <NRootBoot Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'">$(NRoot)\boot-4.0\</NRootBoot>
     <!--Path to stages output directory (including current configuration subfolder).-->
     <NBin>$(NRoot)\bin\$(Configuration)\$(NVer)\</NBin>
     <NObj>$(NRoot)\obj\$(Configuration)\$(NVer)\</NObj>
     <!--Path to boot compiler.-->
     <NBoot>$(NBin)\boot\</NBoot>
     <!-- Project Constants -->
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(UseMSBuild)' != ''">
     <NProjectConstants Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'">RUNTIME_MS</NProjectConstants>
-    <NProjectConstants Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5'">RUNTIME_MS;NET_4_0</NProjectConstants>
+    <NProjectConstants Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'">RUNTIME_MS;NET_4_0</NProjectConstants>
     <NProjectConstants Condition="'$(Configuration)' == 'Debug'">$(NProjectConstants);DEBUG</NProjectConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(UseMSBuild)' == ''">
+    <NProjectConstants Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'">RUNTIME_MONO=1</NProjectConstants>
+    <NProjectConstants Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'">RUNTIME_MONO=1;NET_4_0=1</NProjectConstants>
+    <NProjectConstants Condition="'$(Configuration)' == 'Debug'">$(NProjectConstants);DEBUG=1</NProjectConstants>    
+  </PropertyGroup>
+  <PropertyGroup>
     <NDefineProjectConstants>DefineConstants=$(NProjectConstants)</NDefineProjectConstants>
   </PropertyGroup>
   <!--Project required to build any Nemerle project (.nproj)-->
-  <ItemGroup>
+  <ItemGroup Condition="'$(UseMSBuild)' != ''">
     <NTasksProject Include="$(NRoot)\Nemerle.MSBuild.Tasks.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseMSBuild)' == ''">
+    <NTasksProject Include="$(NRoot)\Nemerle.XBuild.Tasks.csproj" />
   </ItemGroup>
   <ItemGroup>
     <CSharpCompilerFiles Include ="$(NBin)\PowerPack\CSharpParser.dll;$(NBin)\PowerPack\ncc.parser.csharp.dll;$(NBin)\PowerPack\Nemerle.Peg.dll"/>
@@ -46,10 +67,12 @@
     <NCompilerProject Include="$(NRoot)\ncc64.nproj" Condition="'$(PROCESSOR_ARCHITECTURE)' == 'AMD64' Or '$(PROCESSOR_ARCHITEW6432)' == 'AMD64'" />
   </ItemGroup>
 
-  <!-- Compiler test projects -->
+  <!-- Compiler test projects and Nemerle.Diff -->
   <ItemGroup>
     <NTestFramework Include="$(NRoot)\snippets\Nemerle.Test\Nemerle.Test.Framework\Nemerle.Test.Framework.nproj" />
     <NTestFramework Include="$(NRoot)\snippets\Nemerle.Test\Nemerle.Compiler.Test\Nemerle.Compiler.Test.nproj" />
+    <NTestFramework Include="$(NRoot)\snippets\Nemerle.Diff\Nemerle.Diff\Nemerle.Diff.nproj" />
+    <NTestFramework Include="$(NRoot)\snippets\Nemerle.Diff\Nemerle.Diff.Tests\Nemerle.Diff.Tests.nproj" />
   </ItemGroup>
   
   <!--Projects related to Nemerle.Peg-->
@@ -73,25 +96,17 @@
     <NComputationExpressions Include="$(NRoot)\snippets\ComputationExpressions\Test\Test.nproj" />
   </ItemGroup>
 
-  <!--Projects related to Nemerle.Diff -->
-  <ItemGroup>
-    <NDiff Include="$(NRoot)\snippets\Nemerle.Diff\Nemerle.Diff\Nemerle.Diff.nproj" />
-    <NDiff Include="$(NRoot)\snippets\Nemerle.Diff\Nemerle.Diff.Tests\Nemerle.Diff.Tests.nproj" />
-  </ItemGroup>
-
   <!--Projects related to Nemerle.Async -->
-  <ItemGroup Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5'">
+  <ItemGroup Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'">
     <NAsync Include="$(NRoot)\snippets\Nemerle.Async\Nemerle.Async\Nemerle.Async.nproj" />
     <NAsync Include="$(NRoot)\snippets\Nemerle.Async\Nemerle.Async.Macros\Nemerle.Async.Macros.nproj" />
   </ItemGroup>
   
-  <ItemGroup Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5'">
-    <NStatechart Include="$(NRoot)\snippets\Nemerle.Statechart\Nemerle.Statechart.nproj" />
-    <NStatechart Include="$(NRoot)\snippets\Nemerle.Statechart\Nemerle.Statechart.Analyser\Nemerle.Statechart.Analyser.nproj" />
-    <NStatechart Include="$(NRoot)\snippets\Nemerle.Statechart\Nemerle.Statechart.Generator\Nemerle.Statechart.Generator.nproj" />
-    <NStatechart Include="$(NRoot)\snippets\Nemerle.Statechart\Nemerle.Statechart.Parser\Nemerle.Statechart.Parser.nproj" />
+  <ItemGroup Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'">
+    <NStatechart Include="$(NRoot)\snippets\Nemerle.Statechart\Nemerle.Statechart_snippets.nproj" />
     <NStatechart Include="$(NRoot)\snippets\Nemerle.Statechart\Lib\Nemerle.Statechart.Lib.nproj" />
-    <NStatechart Include="$(NRoot)\snippets\Nemerle.Statechart\Ast\Nemerle.Statechart.Ast.nproj" />
+    <NStatechart Include="$(NRoot)\snippets\Nemerle.Statechart\Nemerle.Statechart.Runtime\Nemerle.Statechart.Runtime.nproj" />
+    <NStatechart Include="$(NRoot)\snippets\Nemerle.Statechart\Tests\fsmtest\fsmtest_release.nproj" />
     <!--<NStatechart Include="$(NRoot)\snippets\Nemerle.Statechart\Tests\fsmtest\fsmtest.nproj" />
     <NStatechart Include="$(NRoot)\snippets\Nemerle.Statechart\Tests\gui_file_test\FileFsmTest.nproj" />-->
   </ItemGroup>
@@ -99,12 +114,12 @@
   <!--Projects related to PowerPack-->
   <ItemGroup>
     <NPowerPack Include="$(NRoot)\snippets\Nemerle.Xml\Nemerle.Xml.Macro\Nemerle.Xml.Macro.nproj" />
-    <NPowerPack Include="$(NRoot)\snippets\Nemerle.WPF\Nemerle.WPF\Nemerle.WPF.nproj" />
     <NPowerPack Include="$(NRoot)\snippets\ObjectExpressions\NewObjectMacro\NewObjectMacro.nproj" />
     <NPowerPack Include="$(NRoot)\snippets\Nemerle.Diff\Nemerle.Diff\Nemerle.Diff.nproj" />
     <NPowerPack Include="$(NRoot)\snippets\aop\DevMacros.nproj" />
     <NPowerPack Include="$(NRoot)\snippets\aop\Nemerle.Aop.nproj" />
     <NPowerPack Include="$(NRoot)\snippets\ActivePatterns\ActivePatterns\Nemerle.ActivePatterns.nproj" />
+    <NPowerPack Include="$(NRoot)\snippets\Nemerle.VirtualStatics\Nemerle.VirtualStatics\Nemerle.VirtualStatics.nproj" />
   </ItemGroup>
 
   <!--Projects related to Linq-->
@@ -114,6 +129,10 @@
 
   <ItemGroup>
     <NUnsafe Include="$(NRoot)\snippets\Nemerle.Unsafe\Nemerle.Unsafe\Nemerle.Unsafe.nproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseMSBuild)' != ''">
+    <NWpf Include="$(NRoot)\snippets\Nemerle.WPF\Nemerle.WPF\Nemerle.WPF.nproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -129,7 +148,7 @@
   </ItemGroup>
 
   <!--Projects related to integration-->
-  <ItemGroup Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'">
+  <ItemGroup Condition="'$(UseMSBuild)' != '' And ('$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5')">
     <NIntegrationProject Include="$(NRoot)\VsIntegration\ComInteropHelper\ComInteropHelper.csproj" />
     <NIntegrationProject Include="$(NRoot)\VsIntegration\Nemerle.VisualStudio\GUI\WpfHint\WpfHint.csproj" />
     <NIntegrationProject Include="$(NRoot)\VsIntegration\Nemerle.Compiler.Utils\Nemerle.Compiler.Utils.csproj" />
@@ -141,42 +160,62 @@
     <NIntegrationProject Condition=" '$(Configuration)' != 'Debug' " Include="$(NRoot)\tools\Nemerle.Evaluation.nproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFrameworkVersion)' == 'v4.0'">
+  <ItemGroup Condition="'$(UseMSBuild)' != '' And '$(TargetFrameworkVersion)' == 'v4.0'">
     <NIntegrationProject Include="$(NRoot)\snippets\VS2010\WpfHint\WpfHint.csproj" />
     <NIntegrationProject Include="$(NRoot)\snippets\VS2010\Nemerle.Compiler.Utils\Nemerle.Compiler.Utils.csproj" />
     <NIntegrationProject Include="$(NRoot)\snippets\VS2010\Nemerle.VisualStudio\Nemerle.VisualStudio.csproj" />
   </ItemGroup>
   
-  <ItemGroup Condition="'$(TargetFrameworkVersion)' == 'v4.5'">
+  <ItemGroup Condition="'$(UseMSBuild)' != '' And '$(TargetFrameworkVersion)' == 'v4.5'">
     <NIntegrationProject Include="$(NRoot)\snippets\VS2010\WpfHint\WpfHint.csproj" />
     <NIntegrationProject Include="$(NRoot)\snippets\VS2010\Nemerle.Compiler.Utils\Nemerle.Compiler.Utils-VS-2012.csproj" />
     <NIntegrationProject Include="$(NRoot)\snippets\VS2010\Nemerle.VisualStudio\Nemerle.VisualStudio-VS-2012.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="'$(UseMSBuild)' != '' And '$(TargetFrameworkVersion)' == 'v4.5.1'">
+    <NIntegrationProject Include="$(NRoot)\snippets\VS2010\WpfHint\WpfHint.csproj" />
+    <NIntegrationProject Include="$(NRoot)\snippets\VS2010\Nemerle.Compiler.Utils\Nemerle.Compiler.Utils-VS-2013.csproj" />
+    <NIntegrationProject Include="$(NRoot)\snippets\VS2010\Nemerle.VisualStudio\Nemerle.VisualStudio-VS-2013.csproj" />
   </ItemGroup>
 
   <!--Initialize FX and SDK tools locations-->
   <Target Name="InitTools">
     <GetFrameworkPath>
-      <Output Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5'" TaskParameter="FrameworkVersion40Path" PropertyName="FW40" />
+      <Output Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'" TaskParameter="FrameworkVersion40Path" PropertyName="FW40" />
       <Output Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'" TaskParameter="FrameworkVersion35Path" PropertyName="FW35" />
       <Output Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'" TaskParameter="FrameworkVersion20Path" PropertyName="FW20" />
     </GetFrameworkPath>
-    <GetFrameworkSdkPath>
+    <GetFrameworkSdkPath Condition="'$(UseMSBuild)' != ''">
       <Output Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'" TaskParameter="Path" PropertyName="SDK" />
-      <Output Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5'" TaskParameter="Path" PropertyName="SDK_3" />
+      <Output Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'" TaskParameter="Path" PropertyName="SDK_3" />
     </GetFrameworkSdkPath>
-    <PropertyGroup>
-      <SDKBin Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'">$(SDK)\bin</SDKBin>
-      <SDKBin Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5'">$(SDK_3)\bin\NETFX 4.0 Tools</SDKBin>
+    <GetFrameworkSdkPath Condition="'$(UseMSBuild)' == ''">
+      <Output TaskParameter="Path" PropertyName="SDK" />
+    </GetFrameworkSdkPath>
+    <PropertyGroup Condition="'$(UseMSBuild)' != ''">
+      <SDKBin Condition="'$(SDKBin)' == '' And ('$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5')">$(SDK)\bin</SDKBin>
+      <SDKBin Condition="'$(SDKBin)' == '' And ('$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1')">$(SDK_3)\bin\NETFX 4.0 Tools</SDKBin>
       <GacUtil>"$(SDKBin)\gacutil.exe"</GacUtil>
       <Ildasm>"$(SDKBin)\ildasm.exe"</Ildasm>
       <PEVerify>"$(SDKBin)\peverify.exe"</PEVerify>
       <NGen Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'">"$(FW20)\ngen.exe"</NGen>
-      <NGen Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5'">"$(FW40)\ngen.exe"</NGen>
+      <NGen Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'">"$(FW40)\ngen.exe"</NGen>
       <MSBuild>$(MSBuildBinPath)\msbuild.exe</MSBuild>
       <Junction>$(NRoot)\ExternalDependences\junction.exe</Junction>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(UseMSBuild)' == ''">
+      <SDKToolsBin>$(SDK)\..\..\..\bin</SDKToolsBin>
+      <GacUtil>"$(SDKToolsBin)\gacutil"</GacUtil>
+      <Ildasm>"$(SDKToolsBin)\monodis"</Ildasm>
+      <PEVerify>"$(SDKToolsBin)\peverify"</PEVerify>
+      <NGen Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'">"$(FW20)\ngen.exe"</NGen>
+      <NGen Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'">"$(FW40)\ngen.exe"</NGen>
+      <XBuild>$(MSBuildBinPath)\..\..\..\xbuild</XBuild>
+      <Junction>$(NRoot)\ExternalDependences\junction.exe</Junction>
+    </PropertyGroup>
     <Message Text="Framework tools found at:"    Importance="high" />
-    <Message Text="     MSBuild  - $(MSBuild)"   Importance="high" />
+    <Message Text="     MSBuild  - $(MSBuild)"   Importance="high" Condition="'$(UseMSBuild)' != ''" />
+    <Message Text="     XBuild   - $(XBuild)"    Importance="high" Condition="'$(UseMSBuild)' == ''" />
     <Message Text="     NGen     - $(NGen)"      Importance="high" />
     <Message Text="  SDK tools found at:"        Importance="high" />
     <Message Text="     GacUtil  - $(GacUtil)"   Importance="high" />
@@ -189,10 +228,19 @@
   <!--Builds and deploy tasks dll into boot directory-->
   <Target Name="NTasks" DependsOnTargets="InitTools">
     <MSBuild Projects="@(NTasksProject)" Properties="OutputPath=$(NBoot); IntermediateOutputPath=$(NObj)\Tasks\; NKeysDir=$(NBin)\keys" Targets="$(NTargetName)" />
-    <CreateItem Include="$(NBoot)\Nemerle.MSBuild.Tasks.dll">
+    <CreateItem Include="$(NBoot)\Nemerle.MSBuild.Tasks.dll" Condition="'$(UseMSBuild)' != ''">
+      <Output ItemName="NTasksFiles" TaskParameter="Include" />
+    </CreateItem>
+    <CreateItem Include="$(NBoot)\Nemerle.XBuild.Tasks.dll" Condition="'$(UseMSBuild)' == ''">
       <Output ItemName="NTasksFiles" TaskParameter="Include" />
     </CreateItem>
     <CreateItem Include="$(NBoot)\Nemerle.MSBuild.targets">
+      <Output ItemName="NTasksFiles" TaskParameter="Include" />
+    </CreateItem>
+    <CreateItem Include="$(NBoot)\ncc.bat" Condition="'$(UseMSBuild)' == ''">
+      <Output ItemName="NTasksFiles" TaskParameter="Include" />
+    </CreateItem>
+    <CreateItem Include="$(NBoot)\ncc" Condition="'$(UseMSBuild)' == ''">
       <Output ItemName="NTasksFiles" TaskParameter="Include" />
     </CreateItem>
   </Target>
@@ -277,22 +325,39 @@
       <Asm3 Include="$(NCurBin)\*.dll" />
       <Asm3 Include="$(NCurBin)\*.exe" />
     </ItemGroup>
-    <Exec Command="$(Ildasm) %(Asm2.FullPath) /output:%(Asm2.FullPath).il /nobar" WorkingDirectory="$(NPrevBin)" />
-    <Exec Command="$(Ildasm) %(Asm3.FullPath) /output:%(Asm3.FullPath).il /nobar" WorkingDirectory="$(NCurBin)" />
+    <PropertyGroup Condition="'$(UseMSBuild)' != ''" >
+      <ValidateOutParameter>/out</ValidateOutParameter>
+      <ValidateAdditionalParameters>/nobar</ValidateAdditionalParameters>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(UseMSBuild)' == ''" >
+      <ValidateOutParameter>--output</ValidateOutParameter>
+      <ValidateAdditionalParameters></ValidateAdditionalParameters>
+    </PropertyGroup>
+    <Exec Command="$(Ildasm) &quot;%(Asm2.FullPath)&quot; $(ValidateOutParameter)=&quot;%(Asm2.FullPath).il&quot; $(ValidateAdditionalParameters)" WorkingDirectory="$(NPrevBin)" />
+    <Exec Command="$(Ildasm) &quot;%(Asm3.FullPath)&quot; $(ValidateOutParameter)=&quot;%(Asm3.FullPath).il&quot; $(ValidateAdditionalParameters)" WorkingDirectory="$(NCurBin)" />
     <ItemGroup>
       <IL_PREV Include="$(NPrevBin)\*.il" />
       <IL_LAST Include="$(NCurBin)\*.il" />
     </ItemGroup>
     <MSBuild.Community.Tasks.FileUpdate Files="@(IL_PREV)" Regex="^(//.*)(?=\r)" ReplacementText="// REPLACED" Multiline="True" />
     <MSBuild.Community.Tasks.FileUpdate Files="@(IL_LAST)" Regex="^(//.*)(?=\r)" ReplacementText="// REPLACED" Multiline="True" />
-    <Exec Command="fc $(NPrevBin)\*.il $(NCurBin)\*.il" />
-    <Exec Command="$(PEVerify) %(Asm3.FullPath)" ContinueOnError="False" />
+    
+    <!-- Windows -->
+    <MSBuild.Community.Tasks.FileUpdate Files="@(IL_PREV)" Regex="^(//.*)(?=\r)" ReplacementText="// REPLACED" Multiline="True" Condition=" '$(OS)' == 'Windows_NT' "/>
+    <MSBuild.Community.Tasks.FileUpdate Files="@(IL_LAST)" Regex="^(//.*)(?=\r)" ReplacementText="// REPLACED" Multiline="True" Condition=" '$(OS)' == 'Windows_NT' "/>
+    <Exec Command="fc &quot;$(NPrevBin)\*.il&quot; &quot;$(NCurBin)\*.il&quot;" Condition=" '$(OS)' == 'Windows_NT' "/>
+    <!-- Unix -->
+    <MSBuild.Community.Tasks.FileUpdate Files="@(IL_PREV)" Regex="//.*$" ReplacementText="// REPLACED" Multiline="True" Condition=" '$(OS)' != 'Windows_NT' "/>
+    <MSBuild.Community.Tasks.FileUpdate Files="@(IL_LAST)" Regex="//.*$" ReplacementText="// REPLACED" Multiline="True" Condition=" '$(OS)' != 'Windows_NT' "/>
+    <Exec Command="for il in $(NPrevBin)/*.il; do diff $il &quot;$(NCurBin)/${il##*/}&quot; || exit 1; done" Condition=" '$(OS)' != 'Windows_NT' " />
+
+    <Exec Command="$(PEVerify) &quot;%(Asm3.FullPath)&quot;" ContinueOnError="False" />	
     <Delete Files="@(IL_PREV)" />
     <Delete Files="@(IL_LAST)" />
   </Target>
 
   <!--Runs compiler tests.-->
-  <Target Name="CompilerTests" DependsOnTargets="Linq;Unsafe;_PegAndCSharp;TestFramework">
+  <Target Name="CompilerTests" DependsOnTargets="Linq;Unsafe;_PegAndCSharp;TestFramework;_Wpf">
     <PropertyGroup>
       <NTeamCityPositiveTestArguments Condition=" '$(TEAMCITY_VERSION)' != '' ">"-team-city-test-suite:Ncc-Positive-$(NVer)"</NTeamCityPositiveTestArguments>
       <NTeamCityNegativeTestArguments Condition=" '$(TEAMCITY_VERSION)' != '' ">"-team-city-test-suite:Ncc-Negative-$(NVer)"</NTeamCityNegativeTestArguments>
@@ -301,9 +366,12 @@
       <Output ItemName="NTestFrameworkFiles" TaskParameter="Include" />
     </CreateItem>
     <!--Delete Files="@(CompilerTestsFiles)" /  DONT WORK WITH READONLY FILES!-->
-    <Exec Command="IF EXIST $(NBin)\Tests\ DEL $(NBin)\Tests\ /F /S /Q" WorkingDirectory="$(NBin)\" />
+    <Exec Command="IF EXIST &quot;$(NBin)\Tests\&quot; DEL &quot;$(NBin)\Tests\&quot; /F /S /Q" WorkingDirectory="$(NBin)\" Condition=" '$(OS)' == 'Windows_NT' " />
+    <Delete Files="@(CompilerTestsFiles)" Condition=" '$(OS)' != 'Windows_NT' " />	
     <Copy SourceFiles="$(NBin)\Linq\Nemerle.Linq.dll;$(NBin)\Unsafe\Nemerle.Unsafe.dll;@(CSharpCompilerFiles)" DestinationFolder="$(NBin)\Tests\positive" />
-    <Copy SourceFiles="$(NBin)\Linq\Nemerle.Linq.dll;$(NBin)\Unsafe\Nemerle.Unsafe.dll;@(CSharpCompilerFiles)" DestinationFolder="$(NBin)\Tests\negative" />
+    <Copy SourceFiles="$(NBin)\Linq\Nemerle.Linq.dll;$(NBin)\Unsafe\Nemerle.Unsafe.dll;@(CSharpCompilerFiles)" DestinationFolder="$(NBin)\Tests\negative" />	
+    <Copy SourceFiles="$(NBin)\PowerPack\Nemerle.WPF.dll" DestinationFolder="$(NBin)\Tests\positive" Condition=" '$(UseMSBuild)' != '' " />
+    <Copy SourceFiles="$(NBin)\PowerPack\Nemerle.WPF.dll" DestinationFolder="$(NBin)\Tests\negative" Condition=" '$(UseMSBuild)' != '' " />	
     <!--Delete all temporary files in old testing directory-->
     <CreateItem Include="$(NRoot)\ncc\testsuite\*.exe;$(NRoot)\ncc\testsuite\*.dll;$(NRoot)\ncc\testsuite\*.pdb">
       <Output ItemName="NTestSuiteTempFiles" TaskParameter="Include"/>
@@ -316,13 +384,13 @@
     <Copy SourceFiles="@(NTestFrameworkFiles);@(NTestSuiteFiles)" DestinationFolder="$(NBin)\Tests\positive" />
     <Copy SourceFiles="@(NTestFrameworkFiles);@(NTestSuiteFiles)" DestinationFolder="$(NBin)\Tests\negative" />
     <!--Run positive tests-->
-    <Exec Command="&quot;$(NBin)\Tests\positive\Nemerle.Compiler.Test.exe&quot; $(NTeamCityPositiveTestArguments) -output:. &quot;-p:-nowarn:10003 -def:$(NProjectConstants)&quot; &quot;$(NRoot)\ncc\testsuite\positive\*.n&quot; &quot;$(NRoot)\ncc\testsuite\positive\*.cs&quot;" WorkingDirectory="$(NBin)\Tests\positive" IgnoreStandardErrorWarningFormat="true" />
+    <Exec Command="$(ExeRunner)&quot;$(NBin)\Tests\positive\Nemerle.Compiler.Test.exe&quot; $(NTeamCityPositiveTestArguments) -output:. &quot;-p:-nowarn:10003 -def:$(NProjectConstants)&quot; &quot;$(NRoot)\ncc\testsuite\positive\*.n&quot; &quot;$(NRoot)\ncc\testsuite\positive\*.nnn&quot; &quot;$(NRoot)\ncc\testsuite\positive\*.cs&quot;" WorkingDirectory="$(NBin)\Tests\positive" IgnoreStandardErrorWarningFormat="true" />
     <!--Run negative tests-->
-    <Exec Command="&quot;$(NBin)\Tests\negative\Nemerle.Compiler.Test.exe&quot; $(NTeamCityNegativeTestArguments) -output:. &quot;-p:-nowarn:10003 -def:$(NProjectConstants)&quot; &quot;$(NRoot)\ncc\testsuite\negative\*.n&quot; &quot;$(NRoot)\ncc\testsuite\negative\*.cs&quot;" WorkingDirectory="$(NBin)\Tests\negative" IgnoreStandardErrorWarningFormat="true" />
+    <Exec Command="$(ExeRunner)&quot;$(NBin)\Tests\negative\Nemerle.Compiler.Test.exe&quot; $(NTeamCityNegativeTestArguments) -output:. &quot;-p:-nowarn:10003 -def:$(NProjectConstants)&quot; &quot;$(NRoot)\ncc\testsuite\negative\*.n&quot; &quot;$(NRoot)\ncc\testsuite\negative\*.nnn&quot; &quot;$(NRoot)\ncc\testsuite\negative\*.cs&quot;" WorkingDirectory="$(NBin)\Tests\negative" IgnoreStandardErrorWarningFormat="true" />
   </Target>
 
   <!--Install Nemerle compiler to specified folder. By default to ProgramFiles. To override folder set NInstall property.-->
-  <Target Name="Install" DependsOnTargets="InitTools">
+  <Target Name="Install" DependsOnTargets="InitTools" Condition="'$(UseMSBuild)' != ''">
     <Error Condition=" '$(NCurBin)' == '' " Text="Property NCurBin is not set. Any stage of compilation should preceed the Install target." />
     <!--Path which should contane binary filese to be installed-->
     <!--PropertyGroup Condition=" '$(NCurBin)' == '' ">
@@ -351,19 +419,21 @@
     <Copy SourceFiles="@(FilesToCopyToNInstall)" DestinationFolder="$(NInstall)" />
   </Target>
 
-  <Target Name="IdeEngineTests" Condition="'$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5'">
+  <Target Name="IdeEngineTests" Condition="'$(UseMSBuild)' != '' And ('$(TargetFrameworkVersion)' == '' Or '$(TargetFrameworkVersion)' == 'v2.0' Or '$(TargetFrameworkVersion)' == 'v3.0' Or '$(TargetFrameworkVersion)' == 'v3.5')">
     <!--DependsOnTargets="IntegrationFull"-->
     <!--Run NUnit-tests for Nemerle.Compiler.Utils.dll (Engine Extentions of compiler engine)-->
-    <Exec Command="&quot;$(NRoot)\ExternalDependences\nunit-console.exe&quot; /nologo &quot;$(NBin)\VsIntegration\Nemerle.Compiler.Utils.Tests.dll&quot; /xml=&quot;$(NBin)\VsIntegration\TestResult.xml&quot;" />
+    <Exec Command="$(ExeRunner)&quot;$(NRoot)\ExternalDependences\nunit-console.exe&quot; /nologo &quot;$(NBin)\VsIntegration\Nemerle.Compiler.Utils.Tests.dll&quot; /xml=&quot;$(NBin)\VsIntegration\TestResult.xml&quot;" />
   </Target>
 
   <!--Helper target to build integration-->
-  <Target Name="_Integration" DependsOnTargets="Linq;Unsafe;TestFramework;Tools">
+  <Target Name="_Integration" DependsOnTargets="Linq;Unsafe;TestFramework;Tools" Condition="'$(UseMSBuild)' != ''">
     <MSBuild Projects="@(NIntegrationProject)" Properties="OutputPath=$(NBin)\VsIntegration\; Nemerle=$(NCurBin); Configuration=$(Configuration); BaseIntermediateOutputPath=$(NObj)\VsIntegration\; IntermediateOutputPath=$(NObj)\VsIntegration\; NKeysDir=$(NBin)\keys" Targets="$(NTargetName)"  />
   </Target>
 
   <Target Name="TestFramework">
     <MSBuild Projects="@(NTestFramework)" Properties="OutputPath=$(NBin)\TestFramework\; IntermediateOutputPath=$(NObj)\TestFramework\; Nemerle=$(NCurBin); $(NDefineProjectConstants); Configuration=$(Configuration); NKeysDir=$(NBin)\keys" Targets="$(NTargetName)" />
+    <!-- run Nemerle.Diff tests -->
+    <Exec Command="$(ExeRunner)&quot;$(NBin)\TestFramework\Nemerle.Diff.Tests.exe&quot;" />
   </Target>
 
   <Target Name="Linq">
@@ -383,21 +453,14 @@
     <MSBuild Projects="@(NPeg)" Properties="OutputPath=$(NBin)\PowerPack\; IntermediateOutputPath=$(NObj)\PowerPack\; Nemerle=$(NCurBin); Configuration=$(Configuration); NKeysDir=$(NBin)\keys" Targets="$(NTargetName)" />
     <MSBuild Projects="@(NCSharp)" Properties="OutputPath=$(NBin)\PowerPack\; IntermediateOutputPath=$(NObj)\PowerPack\; Nemerle=$(NCurBin); Configuration=$(Configuration); NKeysDir=$(NBin)\keys" Targets="$(NTargetName)" />
     <!-- run tests -->
-    <Exec Command="&quot;$(NBin)\PowerPack\CSharpParser.Tests.exe&quot;" />
-  </Target>
-
-  <!--Helper target to build Nemerle.Diff and test it -->
-  <Target Name="_Diff">
-    <MSBuild Projects="@(NDiff)" Properties="OutputPath=$(NBin)\PowerPack\; IntermediateOutputPath=$(NObj)\PowerPack\; Nemerle=$(NCurBin); Configuration=$(Configuration); NKeysDir=$(NBin)\keys" Targets="$(NTargetName)" />
-    <!-- run tests -->
-    <Exec Command="&quot;$(NBin)\PowerPack\Nemerle.Diff.Tests.exe&quot;" />
+    <Exec Command="$(ExeRunner)&quot;$(NBin)\PowerPack\CSharpParser.Tests.exe&quot;" />
   </Target>
 
   <!--Helper target to build ComputationExpressions and test it -->
   <Target Name="_ComputationExpressions">
     <MSBuild Projects="@(NComputationExpressions)" Properties="OutputPath=$(NBin)\PowerPack\; IntermediateOutputPath=$(NObj)\PowerPack\; Nemerle=$(NCurBin); Configuration=$(Configuration); NKeysDir=$(NBin)\keys" Targets="$(NTargetName)" />
     <!-- run tests -->
-    <!--<Exec Command="&quot;$(NBin)\PowerPack\ComputationExpressions.Tests.exe&quot;" />-->
+    <!--<Exec Command="$(ExeRunner)&quot;$(NBin)\PowerPack\ComputationExpressions.Tests.exe&quot;" />-->
   </Target>
   
   <!--Helper target to copy async targeting pack -->
@@ -408,19 +471,56 @@
   </Target>
   
   <!--Helper target to build Nemerle.Async and test it -->
-  <Target Name="_Async" DependsOnTargets="_AsyncTargetingPack" Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5'">
+  <Target Name="_Async" DependsOnTargets="_AsyncTargetingPack" Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'">
     <MSBuild Projects="@(NAsync)" Properties="OutputPath=$(NBin)\PowerPack\; IntermediateOutputPath=$(NObj)\PowerPack\; Nemerle=$(NCurBin); Configuration=$(Configuration); NKeysDir=$(NBin)\keys" Targets="$(NTargetName)" />
   </Target>
   
   <!--Helper target to build Nemerle.Statechart and test it -->
-  <Target Name="_Statechart" DependsOnTargets="_PegAndCSharp" Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5'">
+  <Target Name="_Statechart" DependsOnTargets="_PegAndCSharp" Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'">
     <MSBuild Projects="@(NStatechart)" Properties="OutputPath=$(NBin)\PowerPack\; IntermediateOutputPath=$(NObj)\PowerPack\; Nemerle=$(NCurBin); NemerlePowerPack=$(NBin)\PowerPack; Configuration=$(Configuration); NKeysDir=$(NBin)\keys" Targets="$(NTargetName)" />    
     <!-- run tests -->
-    <!--<Exec Command="&quot;$(NBin)\PowerPack\fsmtest.exe&quot;" />-->
+    <!-- <Exec Command="$(ExeRunner)&quot;$(NBin)\PowerPack\fsmtest.exe&quot;" /> -->
+  </Target>
+
+  <PropertyGroup>    
+    <PowerPackDir>$(NBin)\PowerPack\</PowerPackDir>
+    <NSTestSuiteDir>$(NRoot)\snippets\Nemerle.Statechart\tests\testsuite\</NSTestSuiteDir>
+    <NSTestsDir>$(NSTestSuiteDir)\tests\</NSTestsDir>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <NStateChartTestFiles Include="$(PowerPackDir)\Nemerle.Statechart.Lib.dll" />
+    <NStateChartTestFiles Include="$(PowerPackDir)\Nemerle.dll" />
+    <NStateChartTestFiles Include="$(PowerPackDir)\Nemerle.Statechart.dll" />
+    <NStateChartTestFiles Include="$(PowerPackDir)\Nemerle.Statechart.Runtime.dll" />
+    <NStateChartTestFiles Include="$(PowerPackDir)\fsmtest.exe" />
+    <NStateChartRefFiles Include="@(NStateChartTestFiles)" Exclude="$(PowerPackDir)\Nemerle.dll"/>
+    <NStateChartRefs Include="@(NStateChartRefFiles->'$(NSTestsDir)\%(filename)%(extension)')" />    
+  </ItemGroup>
+  
+  <Target Name="NStatechartTests" DependsOnTargets="Stage1;_Statechart" Condition="'$(TargetFrameworkVersion)' == 'v4.0' Or '$(TargetFrameworkVersion)' == 'v4.5' Or '$(TargetFrameworkVersion)' == 'v4.5.1'">
+    <ItemGroup>
+      <NSTestsRefs Include="@(NStateChartRefs->'-ref:&quot;%(identity)&quot;')" />      
+    </ItemGroup>
+    
+    <PropertyGroup>
+      <NTest>$(NBin)\TestFramework\Nemerle.Compiler.Test.exe</NTest>
+      <TestCommand>$(ExeRunner)$(NTest) @(NSTestsRefs, ' ') -output:tests\ positive\*.n negative\*.n</TestCommand>
+    </PropertyGroup>
+
+    <Delete Files="$(NSTestsDir)\*.*" />
+    <Copy SourceFiles="@(NStateChartTestFiles)" DestinationFolder="$(NSTestsDir)" />
+
+    <Exec Command="$(TestCommand)" WorkingDirectory="$(NSTestSuiteDir)" />
+  </Target>
+  
+  <!--Helper target to build Nemerle.WPF -->
+  <Target Name="_Wpf" Condition="'$(UseMSBuild)' != ''">
+    <MSBuild Projects="@(NWpf)" Properties="OutputPath=$(NBin)\PowerPack\; IntermediateOutputPath=$(NObj)\PowerPack\; Nemerle=$(NCurBin); NemerlePowerPack=$(NBin)\PowerPack; Configuration=$(Configuration); NKeysDir=$(NBin)\keys" Targets="$(NTargetName)" />
   </Target>
 
   <!--Helper target to build power pack-->
-  <Target Name="_PowerPack" DependsOnTargets="_PegAndCSharp; Unsafe; TestFramework; _ComputationExpressions; _Diff; _Async; _Statechart">
+  <Target Name="_PowerPack" DependsOnTargets="_PegAndCSharp; Unsafe; TestFramework; _ComputationExpressions; _Async; _Statechart; _Wpf">
     <MSBuild Projects="@(NPowerPack)" Properties="OutputPath=$(NBin)\PowerPack\; IntermediateOutputPath=$(NObj)\PowerPack\; Nemerle=$(NCurBin); Configuration=$(Configuration); NKeysDir=$(NBin)\keys" Targets="$(NTargetName)" />
   </Target>
 
@@ -432,7 +532,7 @@
   <Target Name="DevBuildFull"            DependsOnTargets="Stage4; Validate; CompilerTests;                _Integration; IdeEngineTests; _PowerPack; Install" />
 
   <!--Helper target to build installer.-->
-  <Target Name="_Installer" >
+  <Target Name="_Installer" Condition="'$(UseMSBuild)' != ''">
     <PropertyGroup>
       <NCurBin Condition=" '$(NCurBin)' == '' ">$(NBin)\Stage1</NCurBin>
     </PropertyGroup>

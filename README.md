@@ -37,19 +37,44 @@ Hello world
 
 # How to build
 
+
+Clone with all submodules: git clone --recursive git://github.com/rsdn/nemerle.git
+If you have a clone already: git pull --recurse-submodules
+
 ## Windows
 
-  Run DevBuildQuick.cmd or DevBuildQuick-4.cmd depend on required netfx version. Compiler output will be placed at bin/Debug/net-{fx-version}/Stage1.
+  * For Development:
+  
+  Run DevBuildQuick(fx-version).cmd depending on required .NET version. Compiler output will be placed in bin/Debug/net-{fx-version}/Stage1.
 
-  _Note: for building Visual Studio bindings you need VSSDK and administrative rights._
+  * For Installer:
+  
+  Run BuildInstallerFull(fx-version).cmd depending on required .NET version. Installer will be placed in bin/Release/net-(fx-version)/Installer.
+  
+  _Note: You can also use BuildInstallerFast(fx-version).cmd to build installer without running tests._
+
+  _Note: For building Visual Studio bindings you need VSSDK and administrative rights._
 
 ## Linux
 
-  Using latest Mono-2.10.8 from github Nemerle can bootstrap itself on Mono.
+  Nemerle can bootstrap itself on Mono.
+  
+  * Generic line:
+  
+  xbuild NemerleAll-Mono.nproj /p:TargetFrameworkVersion=v(3.5 or 4.0 or 4.5 or 4.5.1) /p:Configuration=Release(or Debug) /t:Stage4(1 - 4) /tv:4.0(Needed for framework 4.0 and above)   
+  
+  * Release 3.5:
+  
+  xbuild NemerleAll-Mono.nproj /p:TargetFrameworkVersion=v3.5 /p:Configuration=Release /t:Stage4  
+  
+  * Debug 4.0:
+  
+  xbuild NemerleAll-Mono.nproj /p:TargetFrameworkVersion=v4.0 /p:Configuration=Debug /t:Stage4 /tv:4.0
+  
 
 # What about IDE?
 
-  * Visual Studio 2008/2010 integration installed by Nemerle installer
+  * Visual Studio 2008/2010/2012/2013-preview integration installed by Nemerle installer
   * Nemerle Studio is a free IDE based on Visual Studio Shell (Isolated mode) installed by Nemerle installer if VS Shell was installed
   * Sharp Develop 3.0 addin can be builded manually. See snippets/sharpdevelop/ReadMe.txt 
   * See Vim, Emacs, Kate and other editors syntax support in the 'misc' folder

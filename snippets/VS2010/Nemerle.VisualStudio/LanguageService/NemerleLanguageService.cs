@@ -1,35 +1,39 @@
-using System;
+п»їusing System;
 using System.Collections.Generic;
 using System.Diagnostics;
 //using System.Drawing;
 using System.Globalization;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Windows;
 
 using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.Language.Intellisense;
+using Microsoft.VisualStudio.Language.StandardClassification;
+using Microsoft.VisualStudio.Package;
 using Microsoft.VisualStudio.Project;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.TextManager.Interop;
+using Microsoft.VisualStudio.Utilities;
 
 using Nemerle.Compiler;
 using Nemerle.Compiler.Parsetree;
-using Nemerle.Completion2;
 using Nemerle.Compiler.Utils.Async;
-
+using Nemerle.Completion2;
+using Nemerle.Utility;
+using Nemerle.VisualStudio.GUI;
 using Nemerle.VisualStudio.Project;
+using Nemerle.VisualStudio.Properties;
+
 using WpfHint;
+
+using AstUtils = Nemerle.Compiler.Utils.AstUtils;
 using Color = System.Drawing.Color;
 using VsShell = Microsoft.VisualStudio.Shell.VsShellUtilities;
-using Nemerle.VisualStudio.GUI;
-using Nemerle.Utility;
-using AstUtils = Nemerle.Compiler.Utils.AstUtils;
-
-using Nemerle.VisualStudio.Properties;
-using Microsoft.VisualStudio.Package;
-using System.Windows;
-using Microsoft.VisualStudio.Language.Intellisense;
-using Microsoft.VisualStudio.Text.Editor;
+using System.ComponentModel.Composition;
 
 // ReSharper disable LocalizableElement
 namespace Nemerle.VisualStudio.LanguageService
@@ -140,66 +144,66 @@ namespace Nemerle.VisualStudio.LanguageService
 		private static readonly NemerleColorableItem[] _colorableItems = 
 		{
 			// The sequential order of these items should be consistent with the ScanTokenColor enum.
+			// Colors set for compartibility with VS2010
 			//
-			new NemerleColorableItem("Keyword",				  COLORINDEX.CI_BLUE),
-			new NemerleColorableItem("Comment",				  COLORINDEX.CI_DARKGREEN),
-			new NemerleColorableItem("Identifier"),
-			new NemerleColorableItem("String",				   COLORINDEX.CI_MAROON, Color.FromArgb(170,  0,   0)),
-			new NemerleColorableItem("Number"),
 			new NemerleColorableItem("Text"),
+			new NemerleColorableItem("Keyword",                                                COLORINDEX.CI_BLUE),
+			new NemerleColorableItem("Comment",                                                COLORINDEX.CI_DARKGREEN),
+			new NemerleColorableItem("Identifier"),
+			new NemerleColorableItem("String",                                                 COLORINDEX.CI_MAROON, Color.FromArgb(170,  0,   0)),
+			new NemerleColorableItem("Number"),
 
 			new NemerleColorableItem("Operator"),
-			new NemerleColorableItem("Preprocessor Keyword",	 COLORINDEX.CI_BLUE,   Color.FromArgb(  0, 51, 204)),
-			new NemerleColorableItem("StringEx",				 COLORINDEX.CI_MAROON, Color.FromArgb(143, 44, 182)),
-			new NemerleColorableItem("String (@ Verbatim)",   2, COLORINDEX.CI_MAROON, Color.FromArgb(170,  0,   0)),
-			new NemerleColorableItem("StringEx (@ Verbatim)", 2, COLORINDEX.CI_MAROON, Color.FromArgb(143, 44, 182)),
+			new NemerleColorableItem("Preprocessor Keyword",                                   COLORINDEX.CI_BLUE,   Color.FromArgb(  0, 51, 204)),
+			new NemerleColorableItem(ClassificationTypes.StringExName,                         COLORINDEX.CI_MAROON, Color.FromArgb(143, 44, 182)),
+			new NemerleColorableItem(ClassificationTypes.VerbatimStringName,                2, COLORINDEX.CI_MAROON, Color.FromArgb(170,  0,   0)),
+			new NemerleColorableItem(ClassificationTypes.VerbatimStringExName,              2, COLORINDEX.CI_MAROON, Color.FromArgb(143, 44, 182)),
 
-			new NemerleColorableItem("User Types",			   COLORINDEX.CI_CYAN,   Color.FromArgb(43, 145, 175)),
-			new NemerleColorableItem("User Types (Delegates)",   COLORINDEX.CI_CYAN,   Color.FromArgb(43, 145, 175)),
-			new NemerleColorableItem("User Types (Enums)",	   COLORINDEX.CI_CYAN,   Color.FromArgb(43, 145, 175)),
-			new NemerleColorableItem("User Types (Interfaces)",  COLORINDEX.CI_CYAN,   Color.FromArgb(43, 145, 175)),
-			new NemerleColorableItem("User Types (Value types)", COLORINDEX.CI_CYAN,   Color.FromArgb(43, 145, 175)),
+			new NemerleColorableItem(ClassificationTypes.UserTypeName,                         COLORINDEX.CI_CYAN,   Color.FromArgb(43, 145, 175)),
+			new NemerleColorableItem(ClassificationTypes.UserDelegateTypeName,                 COLORINDEX.CI_CYAN,   Color.FromArgb(43, 145, 175)),
+			new NemerleColorableItem(ClassificationTypes.UserEnumTypeName,                     COLORINDEX.CI_CYAN,   Color.FromArgb(43, 145, 175)),
+			new NemerleColorableItem(ClassificationTypes.UserInterfaceTypeName,                COLORINDEX.CI_CYAN,   Color.FromArgb(43, 145, 175)),
+			new NemerleColorableItem(ClassificationTypes.UserValueTypeName,                    COLORINDEX.CI_CYAN,   Color.FromArgb(43, 145, 175)),
 
-			new NemerleColorableItem("Quotation",			 0, COLORINDEX.CI_BROWN),
+			new NemerleColorableItem(ClassificationTypes.QuotationName,                     0, COLORINDEX.CI_BROWN),
 
-			new NemerleColorableItem("<[ Text ]>",			0),
-			new NemerleColorableItem("<[ Keyword ]>",		 0, COLORINDEX.CI_BLUE),
-			new NemerleColorableItem("<[ Comment ]>",		 0, COLORINDEX.CI_DARKGREEN),
-			new NemerleColorableItem("<[ Identifier ]>",	  0),
-			new NemerleColorableItem("<[ String ]>",		  0, COLORINDEX.CI_MAROON, Color.FromArgb(170,  0,   0)),
-			new NemerleColorableItem("<[ Number ]>",		  0),
-			new NemerleColorableItem("<[ Operator ]>",		0),
-			new NemerleColorableItem("<[ StringEx ]>",		0, COLORINDEX.CI_MAROON, Color.FromArgb(143, 44, 182)),
-			new NemerleColorableItem("<[ String (@) ]>",	  1, COLORINDEX.CI_MAROON, Color.FromArgb(170,  0,   0)),
-			new NemerleColorableItem("<[ StringEx (@) ]>",	1, COLORINDEX.CI_MAROON, Color.FromArgb(143, 44, 182)),
+			new NemerleColorableItem(ClassificationTypes.QuotationTextName,                 0),
+			new NemerleColorableItem(ClassificationTypes.QuotationKeywordName,              0, COLORINDEX.CI_BLUE),
+			new NemerleColorableItem(ClassificationTypes.QuotationCommentName,              0, COLORINDEX.CI_DARKGREEN),
+			new NemerleColorableItem(ClassificationTypes.QuotationIdentifierName,           0),
+			new NemerleColorableItem(ClassificationTypes.QuotationStringName,               0, COLORINDEX.CI_MAROON, Color.FromArgb(170,  0,   0)),
+			new NemerleColorableItem(ClassificationTypes.QuotationNumberName,               0),
+			new NemerleColorableItem(ClassificationTypes.QuotationOperatorName,             0),
+			new NemerleColorableItem(ClassificationTypes.QuotationStringExName,             0, COLORINDEX.CI_MAROON, Color.FromArgb(143, 44, 182)),
+			new NemerleColorableItem(ClassificationTypes.QuotationVerbatimStringName,       1, COLORINDEX.CI_MAROON, Color.FromArgb(170,  0,   0)),
+			new NemerleColorableItem(ClassificationTypes.QuotationVerbatimStringExName,     1, COLORINDEX.CI_MAROON, Color.FromArgb(143, 44, 182)),
 
-			new NemerleColorableItem("<[ User Types ]>",			   0, COLORINDEX.CI_CYAN, Color.FromArgb(43, 145, 175)),
-			new NemerleColorableItem("<[ User Types (Delegates) ]>",   0, COLORINDEX.CI_CYAN, Color.FromArgb(43, 145, 175)),
-			new NemerleColorableItem("<[ User Types (Enums) ]>",	   0, COLORINDEX.CI_CYAN, Color.FromArgb(43, 145, 175)),
-			new NemerleColorableItem("<[ User Types (Interfaces) ]>",  0, COLORINDEX.CI_CYAN, Color.FromArgb(43, 145, 175)),
-			new NemerleColorableItem("<[ User Types (Value types) ]>", 0, COLORINDEX.CI_CYAN, Color.FromArgb(43, 145, 175)),
+			new NemerleColorableItem(ClassificationTypes.QuotationUserTypeName,             0, COLORINDEX.CI_CYAN, Color.FromArgb(43, 145, 175)),
+			new NemerleColorableItem(ClassificationTypes.QuotationUserDelegateTypeName,     0, COLORINDEX.CI_CYAN, Color.FromArgb(43, 145, 175)),
+			new NemerleColorableItem(ClassificationTypes.QuotationUserEnumTypeName,	        0, COLORINDEX.CI_CYAN, Color.FromArgb(43, 145, 175)),
+			new NemerleColorableItem(ClassificationTypes.QuotationUserInterfaceTypeName,    0, COLORINDEX.CI_CYAN, Color.FromArgb(43, 145, 175)),
+			new NemerleColorableItem(ClassificationTypes.QuotationUserValueTypeName,        0, COLORINDEX.CI_CYAN, Color.FromArgb(43, 145, 175)),
 
-			new NemerleColorableItem("Highlight One", COLORINDEX.CI_BLACK, COLORINDEX.CI_YELLOW, Color.Empty, Color.FromArgb(135, 206, 250)),
-			new NemerleColorableItem("Highlight Two", COLORINDEX.CI_BLACK, COLORINDEX.CI_GREEN, Color.Empty, Color.FromArgb(255, 182, 193)),
+			new NemerleColorableItem(ClassificationTypes.HighlightOneName,                     COLORINDEX.CI_BLACK, COLORINDEX.CI_YELLOW, Color.Empty, Color.FromArgb(135, 206, 250)),
+			new NemerleColorableItem(ClassificationTypes.HighlightTwoName,                     COLORINDEX.CI_BLACK, COLORINDEX.CI_GREEN, Color.Empty, Color.FromArgb(255, 182, 193)),
 
-			new NemerleColorableItem("TODO comment", COLORINDEX.CI_BLUE, Color.FromArgb(0,  175, 255)),
-			new NemerleColorableItem("BUG comment",  COLORINDEX.CI_RED,  Color.FromArgb(255, 75,  75), FONTFLAGS.FF_BOLD),
-			new NemerleColorableItem("HACK comment", COLORINDEX.CI_RED,  Color.FromArgb(145,  0,   0)),
+			new NemerleColorableItem(ClassificationTypes.ToDoCommentName,                      COLORINDEX.CI_BLUE, Color.FromArgb(0,  175, 255)),
+			new NemerleColorableItem(ClassificationTypes.BugCommentName,                       COLORINDEX.CI_RED,  Color.FromArgb(255, 75,  75), FONTFLAGS.FF_BOLD),
+			new NemerleColorableItem(ClassificationTypes.HackCommentName,                      COLORINDEX.CI_RED,  Color.FromArgb(145,  0,   0)),
 
-			new NemerleColorableItem("<[ TODO comment ]>", 0, COLORINDEX.CI_BLUE, Color.FromArgb(0,  175, 255)),
-			new NemerleColorableItem("<[ BUG comment ]>",  0, COLORINDEX.CI_RED,  Color.FromArgb(255, 75,  75), FONTFLAGS.FF_BOLD),
-			new NemerleColorableItem("<[ HACK comment ]>", 0, COLORINDEX.CI_RED,  Color.FromArgb(145,  0,   0)),
+			new NemerleColorableItem(ClassificationTypes.QuotationToDoCommentName,          0, COLORINDEX.CI_BLUE, Color.FromArgb(0,  175, 255)),
+			new NemerleColorableItem(ClassificationTypes.QuotationBugCommentName,           0, COLORINDEX.CI_RED,  Color.FromArgb(255, 75,  75), FONTFLAGS.FF_BOLD),
+			new NemerleColorableItem(ClassificationTypes.QuotationHackCommentName,          0, COLORINDEX.CI_RED,  Color.FromArgb(145,  0,   0)),
 
-			new NemerleColorableItem("String (<# #>)",		 2, COLORINDEX.CI_MAROON, Color.FromArgb(170,  0,   0)),
-			new NemerleColorableItem("StringEx (<# #>)",	   2, COLORINDEX.CI_MAROON, Color.FromArgb(143, 44, 182)),
-			new NemerleColorableItem("<[ String (<# #>) ]>",   1, COLORINDEX.CI_MAROON, Color.FromArgb(170,  0,   0)),
-			new NemerleColorableItem("<[ StringEx (<# #>) ]>", 1, COLORINDEX.CI_MAROON, Color.FromArgb(143, 44, 182)),
+			new NemerleColorableItem(ClassificationTypes.RecursiveStringName,               2, COLORINDEX.CI_MAROON, Color.FromArgb(170,  0,   0)),
+			new NemerleColorableItem(ClassificationTypes.RecursiveStringExName,             2, COLORINDEX.CI_MAROON, Color.FromArgb(143, 44, 182)),
+			new NemerleColorableItem(ClassificationTypes.QuotationRecursiveStringName,      1, COLORINDEX.CI_MAROON, Color.FromArgb(170,  0,   0)),
+			new NemerleColorableItem(ClassificationTypes.QuotationRecursiveStringExName,    1, COLORINDEX.CI_MAROON, Color.FromArgb(143, 44, 182)),
 			
-			new NemerleColorableItem("Field Identifier", COLORINDEX.CI_DARKBLUE, Color.FromArgb(128, 0, 128)),
-			new NemerleColorableItem("Event Identifier", COLORINDEX.CI_MAGENTA, Color.FromArgb(255, 0, 255)),
-			new NemerleColorableItem("Method Identifier", COLORINDEX.CI_DARKBLUE, Color.FromArgb(0, 139, 139)),
-			new NemerleColorableItem("Property Identifier", COLORINDEX.CI_DARKBLUE, Color.FromArgb(128, 0, 128)),
-
+			new NemerleColorableItem(ClassificationTypes.FieldIdentifierName,                  COLORINDEX.CI_DARKBLUE, Color.FromArgb(128, 0, 128)),
+			new NemerleColorableItem(ClassificationTypes.EventIdentifierName,                  COLORINDEX.CI_MAGENTA, Color.FromArgb(255, 0, 255)),
+			new NemerleColorableItem(ClassificationTypes.MethodIdentifierName,                 COLORINDEX.CI_DARKBLUE, Color.FromArgb(0, 139, 139)),
+			new NemerleColorableItem(ClassificationTypes.PropertyIdentifierName,               COLORINDEX.CI_DARKBLUE, Color.FromArgb(128, 0, 128)),
 		};
 
 		readonly Dictionary<IVsTextLines, NemerleColorizer> _colorizers = new Dictionary<IVsTextLines, NemerleColorizer>();
@@ -233,18 +237,22 @@ namespace Nemerle.VisualStudio.LanguageService
 		//
 		public override int GetItemCount(out int count)
 		{
-			count = _colorableItems.Length;
+			count = _colorableItems.Length - 1; // except 'Text'
 			return VSConstants.S_OK;
 		}
 
 		public override int GetColorableItem(int index, out IVsColorableItem item)
 		{
-			if (index < 1)
-				throw new ArgumentOutOfRangeException("index");
-
-			item = _colorableItems[index - 1];
-
-			return VSConstants.S_OK;
+			if (0 <= index && index < _colorableItems.Length)
+			{
+				item = _colorableItems[index];
+				return VSConstants.S_OK;
+			}
+			else
+			{
+				item = null;
+				return VSConstants.E_FAIL;
+			}
 		}
 
 		#endregion
@@ -408,10 +416,10 @@ namespace Nemerle.VisualStudio.LanguageService
 		}
 
 		/// <include file='doc\LanguageService.uex' path='docs/doc[@for="LanguageService.OnCaretMoved"]/*' />
-		/// Переопределяем этот метод, чтобы вызвать SynchronizeDropdowns у 
-		/// NemerleTypeAndMemberDropdownBars, а не CodeWindowManager, а так же обновить 
-		/// информацию в Engine о активном файле и позиции в нем. Это требуется для ускорения
-		/// типизации методов с которыми в данный момент взаимодействует пользователь.
+		/// РџРµСЂРµРѕРїСЂРµРґРµР»СЏРµРј СЌС‚РѕС‚ РјРµС‚РѕРґ, С‡С‚РѕР±С‹ РІС‹Р·РІР°С‚СЊ SynchronizeDropdowns Сѓ 
+		/// NemerleTypeAndMemberDropdownBars, Р° РЅРµ CodeWindowManager, Р° С‚Р°Рє Р¶Рµ РѕР±РЅРѕРІРёС‚СЊ 
+		/// РёРЅС„РѕСЂРјР°С†РёСЋ РІ Engine Рѕ Р°РєС‚РёРІРЅРѕРј С„Р°Р№Р»Рµ Рё РїРѕР·РёС†РёРё РІ РЅРµРј. Р­С‚Рѕ С‚СЂРµР±СѓРµС‚СЃСЏ РґР»СЏ СѓСЃРєРѕСЂРµРЅРёСЏ
+		/// С‚РёРїРёР·Р°С†РёРё РјРµС‚РѕРґРѕРІ СЃ РєРѕС‚РѕСЂС‹РјРё РІ РґР°РЅРЅС‹Р№ РјРѕРјРµРЅС‚ РІР·Р°РёРјРѕРґРµР№СЃС‚РІСѓРµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ.
 		public override void OnCaretMoved(CodeWindowManager mgr, IVsTextView textView, int line, int col)
 		{
 			if (mgr.DropDownHelper != null)
@@ -477,7 +485,7 @@ namespace Nemerle.VisualStudio.LanguageService
 		IScope* scope = NULL;
 		hr = GetScopeFromBuffer( textBuffer, &scope );
 		if (FAILED(hr)) return hr;
-  
+	
 		long realLine = line;
 		hr = scope->Narrow( line, idx, name, &realLine );
 		RELEASE(scope);
@@ -485,7 +493,7 @@ namespace Nemerle.VisualStudio.LanguageService
 
 		*lineOffset = line - realLine;
 		return S_OK;
-	  */
+		*/
 			return NativeMethods.S_OK;
 		}
 
@@ -521,9 +529,9 @@ namespace Nemerle.VisualStudio.LanguageService
 		hr = strings->QueryInterface( IID_IVsEnumBSTR, reinterpret_cast<void**>(exprs) );
 		RELEASE(strings);
 		if (FAILED(hr)) return hr;
-  
+	
 		return S_OK;
-	  */
+		*/
 			return NativeMethods.S_FALSE;
 		}
 
@@ -638,7 +646,7 @@ namespace Nemerle.VisualStudio.LanguageService
 
 		public void GotoLocation(Location loc, string caption, bool asReadonly)
 		{
-			//TODO: VladD2: Разобраться почему этот код вызывает вылет
+			//TODO: VladD2: Р Р°Р·РѕР±СЂР°С‚СЊСЃСЏ РїРѕС‡РµРјСѓ СЌС‚РѕС‚ РєРѕРґ РІС‹Р·С‹РІР°РµС‚ РІС‹Р»РµС‚
 			//IVsUIShell uiShell = this.GetService(typeof(SVsUIShell)) as IVsUIShell;
 			//if (uiShell != null)
 			//{
@@ -663,7 +671,7 @@ namespace Nemerle.VisualStudio.LanguageService
 
 			if (loc.FileIndex == 0)
 				return;
-			
+
 			VsShell.OpenDocument(Site, loc.File, VSConstants.LOGVIEWID_Code,
 				out hierarchy, out itemID, out docFrame, out textView);
 

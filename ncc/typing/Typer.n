@@ -36,11 +36,15 @@ using Nemerle.Logging;
 using Nemerle.Surround;
 using Nemerle.Utility;
 
+using System;
 using System.Diagnostics;
+using SCG = System.Collections.Generic;
 
 using PExpr = Nemerle.Compiler.Parsetree.PExpr;
 using PT    = Nemerle.Compiler.Parsetree;
-using SCG = System.Collections.Generic;
+using SCG   = System.Collections.Generic;
+
+type CustomTyperHandler = TExpr * (TExpr -> TExpr) -> TExpr;
 
 [assembly: LogFunction (Message.Debug),
            LogFlag (TYPING, 0),
@@ -70,6 +74,8 @@ namespace Nemerle.Compiler
     [RecordIgnore] public ObjectType : FixedType { get; set; }
     [RecordIgnore] public Env : GlobalEnv { get; set; }
   }
+
+  public enum TypingStage { | Stage2 | Stage3 | Stage4 }
 
   [ManagerAccess]
   public abstract class TyperBase
@@ -101,6 +107,12 @@ namespace Nemerle.Compiler
       TExpr.Literal (InternalType.Void, Literal.Void ())
     }
   }
+  
+  [Record]
+  public sealed class StageEventArgs : EventArgs
+  {
+    public Typer : Typer { get; }
+  }
 
   /** A class responsible for typing a single (global or local) function.  */
   public partial class Typer : TyperBase
@@ -122,6 +134,24 @@ namespace Nemerle.Compiler
     locals_stack : Stack [LocalContext];
     [Accessor]
     current_method_builder : MethodBuilder;
+
+    // Uninitialized variable
+    #pragma warning disable 649
+    
+    mutable _customTyperStage2 : SCG.Dictionary[Type, CustomTyperHandler];
+    mutable _customTyperStage3 : SCG.Dictionary[Type, CustomTyperHandler];
+    mutable _customTyperStage4 : SCG.Dictionary[Type, CustomTyperHandler];
+    
+    #pragma warning restore 649
+    
+    public HasCustomTyperStage2 : bool { get { _customTyperStage2 != null } }
+    public HasCustomTyperStage3 : bool { get { _customTyperStage4 != null } }
+    public HasCustomTyperStage4 : bool { get { _customTyperStage4 != null } }
+    
+    public event BeforeStage2 : EventHandler[StageEventArgs];
+    public event BeforeStage3 : EventHandler[StageEventArgs];
+    public event BeforeStage4 : EventHandler[StageEventArgs];
+
     mutable skip_n_return : bool;
 
     mutable inside_yielding_function : bool;
@@ -222,12 +252,83 @@ namespace Nemerle.Compiler
         | None => this
       }
     }
+    
+    internal RaiseBeforeStage2() : void
+    {
+      RaiseBeforeStage(BeforeStage2);
+    }
+    
+    internal RaiseBeforeStage3() : void
+    {
+      RaiseBeforeStage(BeforeStage3);
+    }
+    
+    internal RaiseBeforeStage4() : void
+    {
+      RaiseBeforeStage(BeforeStage4);
+    }
+    
+    private RaiseBeforeStage(@event : EventHandler[StageEventArgs]) : void
+    {
+      def e = @event;
+      when (e != null)
+        e(this, StageEventArgs(this));
+    }
 
+    public SetCustomTyper(stage : TypingStage, exprType : Type, handler : CustomTyperHandler) : void 
+    {
+      def customTyper =
+        match(stage)
+        {
+          | TypingStage.Stage2 => InitCustomTyper(ref _customTyperStage2); _customTyperStage2
+          | TypingStage.Stage3 => InitCustomTyper(ref _customTyperStage3); _customTyperStage3
+          | TypingStage.Stage4 => InitCustomTyper(ref _customTyperStage4); _customTyperStage4
+        };
+        
+      customTyper[exprType] = handler;
+    }
+    
+    private static InitCustomTyper(customTyper : ref SCG.Dictionary.[Type, CustomTyperHandler]) : void
+    {
+      when (customTyper == null)
+        customTyper = SCG.Dictionary.[Type, CustomTyperHandler]();
+    }
+
+    public TryCustomExpressionTyper(stage : TypingStage, expr : TExpr, walker : TExpr -> TExpr, result : out TExpr) : bool 
+    {
+      def customTyper =
+        match(stage)
+        {
+          | TypingStage.Stage2 => _customTyperStage2
+          | TypingStage.Stage3 => _customTyperStage3
+          | TypingStage.Stage4 => _customTyperStage4
+        };
+     
+      if (customTyper != null)
+      {
+        mutable handler;
+        if (customTyper.TryGetValue(expr.GetType(), out handler)) 
+        {
+          result = handler(expr, walker);
+          true
+        }
+        else false
+      }
+      else false
+    }
+
+    //public mutable _key : string;
+    
     public RunFullTyping () : void
     {
+      def timer = Stopwatch.StartNew();
+      def key = GetTopTyper().CurrentMethodBuilder.GetStatisticsKey();
+      //_key = key;
+      
       try
       {
         Manager.DelayedTypingsSecondPass = false;
+
         assert(!solver.InUse);
         assert(solver.IsTopLevel);
         solver.dt_store = Map ();
@@ -312,6 +413,8 @@ namespace Nemerle.Compiler
       {
         messenger.InErrorMode = true;
         solver.InUse = false;
+
+        Manager.UpdateMethodsStatistics(key, timer.Elapsed);
       }
     }
 
@@ -427,7 +530,7 @@ namespace Nemerle.Compiler
           messenger.CleanLocalError ();
 
           def e3 = Util.locate(current_fun.ReturnTypeLocation,
-                      AddCastTo(e2, current_fun.ReturnType, "function body"));
+                      AddCastTo(e2, current_fun.ReturnType, "function body (" + current_fun.Name + ")"));
 
           def e4 = if (skip_n_return) e3
                    else TExpr.Block (current_fun.ReturnType, local, e3);
@@ -459,7 +562,7 @@ namespace Nemerle.Compiler
         field_inits_typed = true;
         RunDelayedTypings();
       }
-
+      
       def t2 = Typer2 (current_type, meth, this);
       t2.Run ();
 
@@ -1524,6 +1627,9 @@ namespace Nemerle.Compiler
 
     DoExpect(expected : TypeVar, actual : TypeVar, place : string, is_subtyping : bool) : bool
     {
+      when (expected.Equals(actual))
+        return true;
+      
       mutable expectedStr : string = null;
       mutable actualStr   : string = null;
 
@@ -1808,6 +1914,15 @@ namespace Nemerle.Compiler
                     | PT.TryCase.Catch as y =>
                       match(y.exn)
                       {
+                        | PT.Splicable.Name(exn) when (System.Char.IsUpper(exn.idl[0])) => 
+                          
+                          def loc = exn.Location;
+                          def ty = PExpr.Ref(loc, exn);
+                          def temp = PT.Name.NameInCurrentColor(Util.tmpname("wildcard"), "_", loc, env);
+                          def name = PT.Splicable.Name(loc, temp);
+                          def newcase = PT.TryCase.Catch(y.Location, name, ty, y.handler);
+                          type_trycases(newcase :: cases, acc);
+                          
                         | PT.Splicable.Name (exn) =>
                           def decl = DefineLocal(exn, BindType(y.exn_ty),
                                                  LocalValue.Kind.ExceptionValue(), false);

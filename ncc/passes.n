@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2003-2008 The University of Wroclaw.
  * All rights reserved.
  *
@@ -35,6 +35,7 @@ using Nemerle.Utility;
 
 using System;
 using System.Collections.Specialized;
+using System.Linq;
 
 using SC    = System.Collections;
 using SCG   = System.Collections.Generic;
@@ -94,6 +95,7 @@ namespace Nemerle.Compiler
     public DelayedTypingsSecondPass : bool { get; internal set; }
     public IsSpeculativeTyping      : bool { get; internal set; }
     internal mutable NotResolvedNestedDelayedTypings : Hashtable[object, bool];
+    public MethodsStatistics : Hashtable[string, int * TimeSpan] { get; default Hashtable(); }
 
     public delegate MessageEventHandler(loc : Location, msg : string) : void;
 
@@ -113,11 +115,31 @@ namespace Nemerle.Compiler
     
     private mutable IdToNameMap : Hashtable[int, string];
     
-    public ReferencedAssemblies : list[LibraryReference] { get; internal set; }
+    public ReferencedAssemblies : list[LibraryReference] { get { LibrariesManager.ReferencedAssemblies.NToList() } }
     
     protected OnTypeTreeBuildFinish() : void
     {
       TypeTreeBuildFinish?.Invoke(this);
+    }
+
+    internal UpdateMethodsStatistics(currentMethodKey : string, timeSpan : TimeSpan) : void
+    {
+      mutable value;
+      MethodsStatistics[currentMethodKey] =
+        if (MethodsStatistics.TryGetValue(currentMethodKey, out value))
+          (value[0] + 1, value[1] + timeSpan)
+        else
+          (1, timeSpan);
+    }
+
+    ShowStatistics() : void
+    {
+      when (Options.ShowCompilerStatistics && MethodsStatistics.Count > 1)
+        foreach ((key, (count, timeSpan)) in MethodsStatistics.KeyValuePairs.OrderBy((_, (_, timeSpan)) => timeSpan))
+        {
+          def msg = $"$key: $timeSpan  $count";
+          Message.Hint(msg);
+        }
     }
 
     private WrapWithCurrentContext(fn : void -> void) : void -> void
@@ -523,11 +545,13 @@ namespace Nemerle.Compiler
 
     protected InitCompiler () : void
     {
+      MethodsStatistics.Clear();
+      
       when (Options.TryStartDebugger)
       {
         def project = IO.Path.GetFileName(Options?.OutputFileName ?? Options?.ProjectPath ?? "?");
         Diagnostics.Debug.Assert(false, 
-          $"Press Retry to start debug session for '$project'. If you wants to see this dialog at next time you should remove '-debugger' option from command line");
+          $"Press Retry to start debug session for '$project'. To suppress this message box please remove '-debugger' option from the ncc.exe command line.");
       }
 
       _userData = null;
@@ -549,10 +573,7 @@ namespace Nemerle.Compiler
       when (shouldCreate (MacrosRegistry))
         MacrosRegistry = MacroRegistry (this);
       when (shouldCreate(LibrariesManager))
-      {
-        ReferencedAssemblies = null;
         LibrariesManager = ComponentsFactory.CreateLibraryReferenceManager (this, Options.LibraryPaths);
-      }
 
       Options.Validate ();
 
@@ -576,14 +597,16 @@ namespace Nemerle.Compiler
 
     protected internal LoadExternalLibraries() : void
     {
+      MethodsStatistics.Clear();
+      
       if (shouldCreate (InternalType.Void))
       {
         unless (Options.DoNotLoadStdlib)
         {
-          LibrariesManager.AddLibrary("mscorlib");
-          LibrariesManager.AddLibrary("System");
-          LibrariesManager.AddLibrary("Nemerle");
-          LibrariesManager.AddLibrary("System.Xml");
+          LibrariesManager.AddLibrary("mscorlib", true);
+          LibrariesManager.AddLibrary("System", true);
+          LibrariesManager.AddLibrary("Nemerle", true);
+          LibrariesManager.AddLibrary("System.Xml", true);
         }
 
         mutable exception : System.Exception;
@@ -611,7 +634,7 @@ namespace Nemerle.Compiler
         def referencedLibraries = Options.ReferencedLibraries.Reverse();
           
         foreach (lib in referencedLibraries)
-          tryEx(() => LibrariesManager.AddLibrary(lib));
+          tryEx(() => LibrariesManager.AddLibrary(lib, true));
 
         tryEx(() => LibrariesManager.LoadLibrariesContents());
 
@@ -624,7 +647,7 @@ namespace Nemerle.Compiler
           {
             def name = IO.Path.GetFileNameWithoutExtension(path);
             def ext  = IO.Path.GetExtension(path);
-            (string.IsNullOrEmpty(ext) || ext.Equals("dll", StringComparison.OrdinalIgnoreCase))
+            (string.IsNullOrEmpty(ext) || ext.Equals(".dll", StringComparison.OrdinalIgnoreCase))
             && name.Equals("Nemerle", StringComparison.OrdinalIgnoreCase)
           }
           
@@ -735,6 +758,8 @@ namespace Nemerle.Compiler
 
         unless (Options.CompileToMemory)
           Hierarchy.SaveAssembly ();
+        
+        ShowStatistics();
 
         Message.MaybeBailout();
 

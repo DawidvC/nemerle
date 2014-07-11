@@ -74,16 +74,18 @@ namespace Nemerle.Utility
         {
           match (reader.ReadLine())
           {
-            | null =>
-              None()
+            | null => None()
             | line =>
               regexp match (line)
               {
                 | @"(?<tag>.+)\-(?<rev>.+)\-(?<commit>.+)" =>
                   def tag = Regex.Replace(tag, @"[^\d\.]", "");
-                  Some(tag, rev, commit);
-                | _ =>
-                  loop(reader);
+                  if (tag == ".")
+                    Some(null, rev, commit)
+                  else
+                    Some(tag, rev, commit);
+                    
+                | _ => loop(reader);
               }
           }
         }
@@ -113,13 +115,13 @@ namespace Nemerle.Utility
 
       def configCommon(si) // mono git or msysgit with git.exe in PATH
       {
-        si.FileName = "git";
+        si.FileName  = Environment.GetEnvironmentVariable("GIT_PATH") ?? "git";
         si.Arguments = "describe --tags --long";
       }
 
       def configCmd(si) // PATH conatains git.cmd only workaround
       {
-        si.FileName = "cmd";
+        si.FileName  = "cmd";
         si.Arguments = "/C git describe --tags --long";
       }
 

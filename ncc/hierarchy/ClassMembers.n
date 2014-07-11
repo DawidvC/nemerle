@@ -91,6 +91,30 @@ public abstract class MemberBuilder : MemberInfo, IMember, System.IEquatable[IMe
   public Env : GlobalEnv;
   public virtual  NameLocation : Location { get { _ast.NameLocation } }
 
+  public GetStatisticsKey() : string
+  {
+    def env = if (this.Env == null) declaring_type.GlobalEnv else this.Env;
+    
+    if (env == null)
+      "env == null"
+    else
+    {
+      def ti  = env.Manager.LookupTypeInfo("Nemerle.Diagnostics.CompileStatistic");
+      def res = this.Modifiers.FindAttribute(ti, env);
+      
+      if (res is Some(atr))
+      {
+        match (atr)
+        {
+          | <[ $_ ($(str : string))]> => str
+          | _ => "Incorrect Nemerle.Diagnostics.CompileStatistic attribute format."
+        }
+      }
+      else
+        "Other"//"Other-" + this.Name.Replace('\r', '_').Replace('\n', '_').Replace(' ', '_').Replace('\t', '_')
+    }
+  }
+
   protected this (par : TypeBuilder, ast : PT.ClassMember)
   {
     declaring_type = par;
@@ -934,6 +958,12 @@ public partial class MethodBuilder : MemberBuilder, IMethod
       {
         | FunBody.Parsed =>
           def typer =  Manager.ComponentsFactory.CreateTyper (this);
+          
+          // Subscribe to events in typer and forward them to the declaring type.
+          typer.BeforeStage2 += (s, e) => declaring_type.OnMethodBeforeStage2(s, e);
+          typer.BeforeStage3 += (s, e) => declaring_type.OnMethodBeforeStage3(s, e);
+          typer.BeforeStage4 += (s, e) => declaring_type.OnMethodBeforeStage4(s, e);     
+          
           typer.RunFullTyping ();
         | _ => ()
       }
@@ -1361,10 +1391,17 @@ public partial class MethodBuilder : MemberBuilder, IMethod
   {
     when (declaring_type.IsInterface)
     {
-      unless (HasAbstractBody)
+      // Allow static methods in interface
+      unless (HasAbstractBody || (Attributes %&& NemerleModifiers.Static))
         Message.Error(loc, "interface method cannot have body");
       unless (Ast.implemented.IsEmpty)
         Message.Error(loc, "interface method cannot implement anything");
+        
+      // Protected static methods without internal has no meaning
+      when (Attributes %&& NemerleModifiers.Static &&
+            Attributes %&& NemerleModifiers.Protected &&
+          !(Attributes %&& NemerleModifiers.Internal))
+        Message.Error(loc, "interface static methods cannot be 'protected', but can be 'protected internal'");
     }
 
     when (HasAbstractBody && !IsBodyless)
