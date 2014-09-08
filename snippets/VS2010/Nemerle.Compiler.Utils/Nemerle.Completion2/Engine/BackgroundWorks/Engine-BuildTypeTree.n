@@ -237,7 +237,9 @@ namespace Nemerle.Completion2
 
         _compileUnits = array(Nemerle.Compiler.Location.GetIndexArrayLength());
 
-        foreach (source in _callback.GetSources())
+        def sources = _callback.GetSources();
+        
+        foreach (source in sources)
         {
           def sourceStemp = source.GetTextCurrentVersionAndFileIndex();
           def (_, version, fileIndex) = sourceStemp;
@@ -258,12 +260,20 @@ namespace Nemerle.Completion2
 
           // регистрируем обработчики изменения исходников, разбираемых кастомными парсерами
           def sourceFileName = Location.GetFileName(fileIndex);
-          unless(string.IsNullOrEmpty(sourceFileName))
-          when(Parser.IsExtensionRegistered(System.IO.Path.GetExtension(sourceFileName)))
-            SubscribeSourceChanged(fileIndex, OnSourceChanged, invokeAfterSubscription = false);
+          unless (string.IsNullOrEmpty(sourceFileName))
+          {
+            def ext = System.IO.Path.GetExtension(sourceFileName);
+            when (string.Compare(ext, ".n", StringComparison.OrdinalIgnoreCase) != 0 && Parser.IsExtensionRegistered(ext))
+              SubscribeSourceChanged(fileIndex, OnSourceChanged, invokeAfterSubscription = false);
+          }
 
           when (request.Stop)
             throw CompilationAbortedException("parsing of top level AST");
+            
+          when (source.HasView)
+          {
+            assert2(true);
+          }
         }
 
         // create N.C.TypeBuilders for all parsed types and add them to namespace hierarchy
@@ -306,6 +316,9 @@ namespace Nemerle.Completion2
 
         when (TypedtreeCreated != null)
           TypedtreeCreated(_project, EventArgs.Empty);
+          
+        foreach (source when source.HasView in sources)
+          UpdateTypeHighlightings(source);
 
         ignore(BeginCheckMethods(_project));
 #pragma warning restore 618 // Obsolete
@@ -352,7 +365,7 @@ namespace Nemerle.Completion2
         AsyncWorker.AddResponse(() => _callback.SetStatusText("Building types tree is completed."));
       }
     } // end of BuildTypesTree()
-
+    
     private OnSourceChanged(_source : ISource) : void
     {
       // при изменении исходников, отображенных на кастомные парсеры

@@ -131,12 +131,6 @@
     <Compile Include="Nemerle.Completion2\CodeModel\Project.Using.n" />
     <Compile Include="Nemerle.Completion2\CodeModel\QuickTipInfo.n" />
     <Compile Include="Nemerle.Completion2\CodeModel\RegionsHelper.n" />
-    <Compile Include="Nemerle.Completion2\CodeModel\ScanLexer.n" />
-    <Compile Include="Nemerle.Completion2\CodeModel\ScanState.n" />
-    <Compile Include="Nemerle.Completion2\CodeModel\ScanTokenColor.n" />
-    <Compile Include="Nemerle.Completion2\CodeModel\ScanTokenInfo.n" />
-    <Compile Include="Nemerle.Completion2\CodeModel\ScanTokenTriggers.n" />
-    <Compile Include="Nemerle.Completion2\CodeModel\ScanTokenType.n" />
     <Compile Include="Nemerle.Completion2\CodeModel\SourceGenerator.n" />
     <Compile Include="Nemerle.Completion2\CodeModel\Static.Analysis.n" />
     <Compile Include="Nemerle.Completion2\CodeModel\TokenFinder.n" />
@@ -188,6 +182,8 @@
     <Compile Include="Async\AsyncRequest\GotoInfoForMemberAsyncRequest.n" />
     <Compile Include="Nemerle.Completion2\CodeModel\MethodTipInfo\VariantConstantObjectTipInfo.n" />
     <Compile Include="Nemerle.Completion2\OverloadsEqualityComparer.n" />
+    <Compile Include="Nemerle.Completion2\Engine\BackgroundWorks\Engine-UpdateTypeHighlightings.n" />
+    <Compile Include="Async\AsyncRequest\UpdateTypeHighlightingsAsyncRequest.n" />
     <None Include="Nemerle.Completion2\Tests\Heavy.Tests\CommonTest.n" />
     <None Include="Nemerle.Completion2\Tests\Heavy.Tests\FindDefinition.TestProjectOne.n" />
     <None Include="Nemerle.Completion2\Tests\Heavy.Tests\FindDefinition.TestProjectTwo.n" />

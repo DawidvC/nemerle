@@ -178,11 +178,6 @@ namespace Nemerle.VisualStudio.LanguageService
 			//Debug.WriteLine("OnSetFocus(IVsTextView view)");
 			//ShowAst(view, true);
 			base.OnSetFocus(view);
-
-			var source = Source;
-
-			if (source != null)
-				source.OnSetFocus(view); // notify source
 		}
 
 		private void ShowAst(IVsTextView view, bool showInfo)
@@ -226,8 +221,6 @@ namespace Nemerle.VisualStudio.LanguageService
 				{
 					// pos was changed
 					_viewsCarretInfo[viewUnknown] = new TupleIntInt(line, idx);
-					Source.CaretChanged(view, line, idx);
-					//Source.TryHighlightBraces1(view);
 					//Debug.WriteLine("pos was changed line=" + line + " col=" + idx);
 				}
 			}
@@ -237,7 +230,7 @@ namespace Nemerle.VisualStudio.LanguageService
 		{
 			var service = Source.Service;
 
-			service.ContextMenuActive = true;
+			service.IsHintsEnabled = false;
 
 			try
 			{
@@ -253,7 +246,7 @@ namespace Nemerle.VisualStudio.LanguageService
 			}
 			finally
 			{
-				service.ContextMenuActive = false;
+				service.IsHintsEnabled = true;
 			}
 			return;
 		}
@@ -371,7 +364,7 @@ namespace Nemerle.VisualStudio.LanguageService
 				switch ((VSConstants.VSStd2KCmdID)nCmdId)
 				{
 					case VSConstants.VSStd2KCmdID.CANCEL:
-						RemoveLastHighlighting();
+						Source.SetUsageHighlighting(Enumerable.Empty<GotoInfo>());
 						Source.Service.Hint.Close();
 						break; // go trocess ESC
 
@@ -441,7 +434,7 @@ namespace Nemerle.VisualStudio.LanguageService
 						HighlightSymbol();
 						return VSConstants.S_OK;
 					case MenuCmd.CmdId.RemoveLastHighlighting: // cmdIdRemoveLastHighlighting
-						RemoveLastHighlighting();
+						Source.SetUsageHighlighting(Enumerable.Empty<GotoInfo>());
 						Source.Service.Hint.Close();
 						return VSConstants.S_OK;
 					case MenuCmd.CmdId.SourceOutlinerWindow:
@@ -546,12 +539,6 @@ namespace Nemerle.VisualStudio.LanguageService
 
 				source.GetEngine().BeginHighlightUsages(source, span.iStartLine + 1, span.iStartIndex + 1);
 			}
-		}
-
-		private void RemoveLastHighlighting()
-		{
-			if (Source != null && Source.ProjectInfo != null)
-				Source.ProjectInfo.RemoveLastHighlighting(Source);
 		}
 
 		private bool WarnAboutErrors()
@@ -683,8 +670,6 @@ namespace Nemerle.VisualStudio.LanguageService
 				if (frm.ShowDialog(TextEditorWindow) == DialogResult.OK)
 					Source.RenameSymbols(frm.NewName, usages);
 			}
-
-			RemoveLastHighlighting();
 		}
 
 		private void FindInheritors()

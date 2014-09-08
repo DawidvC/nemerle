@@ -49,7 +49,7 @@
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
-    <DeployExtension Condition=" '$(DeployExtension)' == '' ">False</DeployExtension>
+    <DeployExtension Condition=" '$(DeployExtension)' == '' ">True</DeployExtension>
   </PropertyGroup>
   <UsingTask TaskName="Nemerle.Tools.MSBuildTask.SetEnvironmentVariable" AssemblyFile="$(Nemerle)\Nemerle.MSBuild.Tasks.dll" />
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -174,9 +174,25 @@
     <Compile Include="GUI\Wizards\Macro\MacroType.Expression.cs" />
     <Compile Include="GUI\Wizards\Macro\MacroType.Attribute.cs" />
     <Compile Include="GUI\Wizards\ParameterDef.cs" />
-    <Compile Include="LanguageService\ClassificationFormats.cs" />
-    <Compile Include="LanguageService\ClassificationTypes.cs" />
     <Compile Include="LanguageService\DefGuidList.cs" />
+    <Compile Include="LanguageService\Highlighting\ClassificationFormats.cs" />
+    <Compile Include="LanguageService\Highlighting\ClassificationTypes.cs" />
+    <Compile Include="LanguageService\Highlighting\ClassifierUtils.cs" />
+    <Compile Include="LanguageService\Highlighting\ContentTypes.cs" />
+    <Compile Include="LanguageService\Highlighting\MatchingBracesTagger\MatchingBracesTagger.cs" />
+    <Compile Include="LanguageService\Highlighting\MatchingBracesTagger\MatchingBracesTaggerProvider.cs" />
+    <Compile Include="LanguageService\Highlighting\ParseUtil.cs" />
+    <Compile Include="LanguageService\Highlighting\Comment.cs" />
+    <Compile Include="LanguageService\Highlighting\CommentType.cs" />
+    <Compile Include="LanguageService\Highlighting\ClassificationParseResult.cs" />
+    <Compile Include="LanguageService\Highlighting\SyntaxClassifier\SpanInfo.cs" />
+    <Compile Include="LanguageService\Highlighting\SyntaxClassifier\SpanType.cs" />
+    <Compile Include="LanguageService\Highlighting\SyntaxClassifier\SyntaxClassifier.cs" />
+    <Compile Include="LanguageService\Highlighting\SyntaxClassifier\SyntaxClassifierProvider.cs" />
+    <Compile Include="LanguageService\Highlighting\TypeClassifier\TypeClassifier.cs" />
+    <Compile Include="LanguageService\Highlighting\TypeClassifier\TypeClassifierProvider.cs" />
+    <Compile Include="LanguageService\Highlighting\UsageClassifier\UsageClassifier.cs" />
+    <Compile Include="LanguageService\Highlighting\UsageClassifier\UsageClassifierProvider.cs" />
     <Compile Include="LanguageService\SmartTags\NemerleImplementsSmartTag.cs" />
     <Compile Include="LanguageService\SmartTags\NemerleImplementsSmartTagger.cs" />
     <Compile Include="LanguageService\SmartTags\NemerleImplementsSmartTagTaggerProvider.cs" />
@@ -297,9 +313,7 @@
     <Compile Include="LanguageService\NemerleAuthoringScope.cs" />
     <Compile Include="LanguageService\NemerleAuthoringSink.cs" />
     <Compile Include="LanguageService\NemerleColorableItem.cs" />
-    <Compile Include="LanguageService\NemerleColorizer.cs" />
     <Compile Include="LanguageService\NemerleLanguageService.cs" />
-    <Compile Include="LanguageService\NemerleScanner.cs" />
     <Compile Include="LanguageService\NemerleSource.cs">
     </Compile>
     <Compile Include="LanguageService\SourceTextManager.cs" />
@@ -585,7 +599,6 @@
       <DependentUpon>RenameRefactoringDlg.cs</DependentUpon>
     </Compile>
     <Compile Include="Helpers\PEReader.cs" />
-    <Compile Include="LanguageService\BracketFinder.cs" />
     <Compile Include="LanguageService\ContainedLanguage\CodeBlocksEnumerator.cs" />
     <Compile Include="LanguageService\ContainedLanguage\ContainedSource.cs" />
     <Compile Include="LanguageService\ContainedLanguage\ContainedViewFilter.cs" />
